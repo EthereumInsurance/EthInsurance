@@ -22,10 +22,16 @@ contract Insurance is Ownable {
     uint256 riskFactor;
   }
 
+  struct StakeWithdraw {
+    uint256 blockInitiated;
+    uint256 stake;
+  }
+
   mapping (bytes32 => ProtocolProfile) public profiles;
   mapping (bytes32 => uint256) public profileBalances;
   mapping (bytes32 => uint256) public profilePremiumLastPaid;
 
+  mapping (address => StakeWithdraw) public stakesWithdraw;
   mapping(address => uint256) public stakes;
   uint256 public totalStake;
   // in case of apy on funds. this will be added to total funds
@@ -54,8 +60,9 @@ contract Insurance is Ownable {
       require(profilePremiumLastPaid[_protocol] > 0, "INVALID_LAST_PAID");
       return;
     }
+    // TODO if riskfactor is changing. Call payOffDebt to get the debt for the old risk factor
     if (_premiumLastPaid == uint256(-1)) {
-      profilePremiumLastPaid[_protocol] = block.timestamp;
+      profilePremiumLastPaid[_protocol] = block.number;
     } else {
       profilePremiumLastPaid[_protocol] = _premiumLastPaid;
     }
@@ -82,10 +89,36 @@ contract Insurance is Ownable {
   }
 
   // to withdraw funds, add them to a vesting schedule
-  //function withdrawFunds(uint256 _amount) external
+  function withdrawStake(uint256 _amount) external {
+    require(stakesWithdraw[msg.sender].blockInitiated == 0, "WITHDRAW_ACTIVE");
+    require(stakes[msg.sender] >= _amount, "INSUFFICIENT_STAKE");
+    stakes[msg.sender] = stakes[msg.sender].sub(_amount);
+    // totalStake sub? no right
+    stakesWithdraw[msg.sender] = StakeWithdraw(block.number, _amount);
+  }
+
+  function cancelWithdraw() external {
+    StakeWithdraw memory withdraw = stakesWithdraw[msg.sender];
+    require(withdraw.blockInitiated != 0, "WITHDRAW_NOT_ACTIVE");
+    require(withdraw.blockInitiated.add(timeLock) > block.number, "TIMELOCK_EXPIRED");
+    stakes[msg.sender] = stakes[msg.sender].add(withdraw.stake);
+    delete stakesWithdraw[msg.sender];
+  }
 
   // to claim the withdrawed funds, if the vesting period is ended
-  //function claimFunds(uint256 _entry) external
+
+  // everyone can execute a claim for any staker
+  // this fights the game design where people call withdraw to skip the timeLock.
+  // And only claim when a hack occurs.
+  function claimFunds(address _staker) external {
+    StakeWithdraw memory withdraw = stakesWithdraw[_staker];
+    require(withdraw.blockInitiated != 0, "WITHDRAW_NOT_ACTIVE");
+    require(withdraw.blockInitiated.add(timeLock) <= block.number, "TIMELOCK_ACTIVE");
+    uint256 funds = withdraw.stake.mul(totalStakeFunds).div(totalStake);
+    token.transfer(_staker, funds);
+    delete stakesWithdraw[msg.sender];
+    totalStake = totalStake.sub(withdraw.stake);
+  }
 
   function addProfileBalance(bytes32 _protocol, uint256 _amount) external {
     require(token.transferFrom(msg.sender, address(this), _amount), "INSUFFICIENT_FUNDS");
@@ -98,11 +131,11 @@ contract Insurance is Ownable {
     profileBalances[_protocol] = profileBalances[_protocol].sub(debt);
     // move funds to the staker pool
     totalStakeFunds = totalStakeFunds.add(debt);
-    profilePremiumLastPaid[_protocol] = block.timestamp;
+    profilePremiumLastPaid[_protocol] = block.number;
   }
 
   function accruedDebt(bytes32 _protocol) public view returns(uint256) {
-    return block.timestamp.sub(
+    return block.number.sub(
       profilePremiumLastPaid[_protocol]
     ).mul(premiumPerBlock(_protocol));
   }
