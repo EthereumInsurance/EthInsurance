@@ -31,7 +31,7 @@ describe("Happy flow", function () {
       parseEther("250")
     );
     expect(await insurance.totalStake()).to.eq(parseEther("250"));
-    expect(await insurance.totalStakeFunds()).to.eq(parseEther("250"));
+    expect(await insurance.totalStakedFunds()).to.eq(parseEther("250"));
   });
   it("Add protocol", async function () {
     blockNumber = await block(
@@ -56,7 +56,7 @@ describe("Happy flow", function () {
       parseEther("1250")
     );
     expect(await insurance.totalStake()).to.eq(parseEther("1250"));
-    expect(await insurance.totalStakeFunds()).to.eq(parseEther("1250"));
+    expect(await insurance.totalStakedFunds()).to.eq(parseEther("1250"));
   });
   it("Verify protocol changes", async function () {
     expect(await insurance.coveredFunds(PLACEHOLDER_PROTOCOL)).to.eq(
@@ -97,6 +97,6 @@ describe("Happy flow", function () {
       parseEther("1250").add(paid)
     );
     expect(await insurance.totalStake()).to.eq(parseEther("1250"));
-    expect(await insurance.totalStakeFunds()).to.eq(parseEther("1250").add(paid));
+    expect(await insurance.totalStakedFunds()).to.eq(parseEther("1250").add(paid));
   });
 });
