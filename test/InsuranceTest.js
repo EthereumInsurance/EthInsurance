@@ -27,6 +27,7 @@ describe("Happy flow", function () {
     const Insurance = await ethers.getContractFactory("Insurance");
     insurance = await Insurance.deploy(ERC20.address, StakeToken.address);
 
+    await insurance.setTimeLock(10);
     await ERC20.approve(insurance.address, constants.MaxUint256);
     await StakeToken.approve(insurance.address, constants.MaxUint256);
     await StakeToken.transferOwnership(insurance.address);
@@ -36,6 +37,7 @@ describe("Happy flow", function () {
     expect(await insurance.getFunds(await owner.getAddress())).to.eq(
       parseEther("250")
     );
+    expect(await ERC20.balanceOf(insurance.address)).to.eq(parseEther("250"));
     expect(await StakeToken.totalSupply()).to.eq(parseEther("250"));
     expect(await insurance.totalStakedFunds()).to.eq(parseEther("250"));
   });
@@ -105,6 +107,57 @@ describe("Happy flow", function () {
     expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
     expect(await insurance.totalStakedFunds()).to.eq(
       parseEther("1250").add(paid)
+    );
+  });
+  it("Verify pool token", async function () {
+    expect(await ERC20.balanceOf(insurance.address)).to.eq(parseEther("1350"));
+  });
+  it("Withdraw stake", async function () {
+    expect(await StakeToken.balanceOf(await owner.getAddress())).to.eq(
+      parseEther("1250")
+    );
+
+    await insurance.withdrawStake(parseEther("300"));
+    expect(await StakeToken.balanceOf(await owner.getAddress())).to.eq(
+      parseEther("950")
+    );
+    expect(await StakeToken.balanceOf(insurance.address)).to.eq(
+      parseEther("300")
+    );
+
+    expect(await ERC20.balanceOf(insurance.address)).to.eq(parseEther("1350"));
+    expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
+  });
+  it("Cancel withdraw", async function () {
+    await insurance.cancelWithdraw();
+    expect(await StakeToken.balanceOf(await owner.getAddress())).to.eq(
+      parseEther("1250")
+    );
+    expect(await StakeToken.balanceOf(insurance.address)).to.eq(
+      parseEther("0")
+    );
+    expect(await ERC20.balanceOf(insurance.address)).to.eq(parseEther("1350"));
+    expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
+  });
+  it("Withdraw stake again", async function () {
+    await insurance.withdrawStake(parseEther("625"));
+  });
+  it("Claim withdraw", async function () {
+    for (var i = 1; i <= 10; i++) {
+      await ethers.provider.send("evm_mine", []);
+    }
+    await insurance.claimFunds(await owner.getAddress());
+    expect(await StakeToken.balanceOf(await owner.getAddress())).to.eq(
+      parseEther("625")
+    );
+    expect(await StakeToken.balanceOf(insurance.address)).to.eq(
+      parseEther("0")
+    );
+
+    // 50% of the pool
+    const paidout = parseEther("1250").add(paid).div(2);
+    expect(await ERC20.balanceOf(insurance.address)).to.eq(
+      parseEther("1350").sub(paidout)
     );
   });
 });
