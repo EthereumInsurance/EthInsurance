@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 interface IPayOut {
-    function pay(uint256 _amount) external;
+    function insurancePaid(uint256 _amount) external;
 }
 
 contract Insurance is Ownable {
@@ -83,9 +83,9 @@ contract Insurance is Ownable {
         address _payout
     ) external onlyOwner {
         require(coveredFunds(_protocol) >= _amount, "INSUFFICIENT_COVERAGE");
-
+        require(token.transfer(_payout, _amount), "INSUFFICIENT_FUNDS");
         IPayOut payout = IPayOut(_payout);
-        payout.pay(_amount);
+        payout.insurancePaid(_amount);
         totalStakedFunds = totalStakedFunds.sub(_amount);
     }
 
