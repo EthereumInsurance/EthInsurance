@@ -126,6 +126,7 @@ contract Insurance is Ownable {
             withdraw.blockInitiated.add(timeLock) > block.number,
             "TIMELOCK_EXPIRED"
         );
+        // if this one fails, contract is broken
         stakeToken.transfer(msg.sender, withdraw.stake);
         delete stakesWithdraw[msg.sender];
     }
@@ -145,6 +146,7 @@ contract Insurance is Ownable {
         uint256 funds = withdraw.stake.mul(totalStakedFunds).div(
             stakeToken.totalSupply()
         );
+        // if this one fails, contract is broken
         token.transfer(_staker, funds);
         stakeToken.burn(address(this), withdraw.stake);
         delete stakesWithdraw[msg.sender];
