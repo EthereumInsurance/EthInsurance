@@ -15,6 +15,7 @@ contract Insurance is Ownable {
     using SafeMath for uint256;
 
     IERC20 public token;
+    IERC20 public stake;
 
     struct ProtocolProfile {
         // translated to the value of the native erc20 of the pool
