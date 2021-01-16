@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
 import "hardhat/console.sol";
@@ -7,15 +7,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-interface IPayOut {
-    function insurancePaid(uint256 _amount) external;
-}
+import "./interfaces/IPayOut.sol";
 
 contract Insurance is Ownable {
     using SafeMath for uint256;
 
     IERC20 public token;
-    IERC20 public stake;
+    IERC20 public stakeToken;
 
     struct ProtocolProfile {
         // translated to the value of the native erc20 of the pool
