@@ -8,12 +8,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IPayOut.sol";
+import "./interfaces/IStake.sol";
 
 contract Insurance is Ownable {
     using SafeMath for uint256;
 
     IERC20 public token;
-    IERC20 public stakeToken;
+    IStake public stakeToken;
 
     struct ProtocolProfile {
         // translated to the value of the native erc20 of the pool
@@ -32,15 +33,14 @@ contract Insurance is Ownable {
     mapping(bytes32 => uint256) public profilePremiumLastPaid;
 
     mapping(address => StakeWithdraw) public stakesWithdraw;
-    mapping(address => uint256) public stakes;
-    uint256 public totalStake;
     // in case of apy on funds. this will be added to total funds
     uint256 public totalStakedFunds;
     // time lock for withdraw period in blocks
     uint256 public timeLock;
 
-    constructor(address _token) public {
+    constructor(address _token, address _stakeToken) public {
         token = IERC20(_token);
+        stakeToken = IStake(_stakeToken);
     }
 
     function setTimeLock(uint256 _timeLock) external onlyOwner {
@@ -93,15 +93,16 @@ contract Insurance is Ownable {
             token.transferFrom(msg.sender, address(this), _amount),
             "INSUFFICIENT_FUNDS"
         );
-        totalStake = totalStake.add(_amount);
+        stakeToken.mint(msg.sender, _amount);
         totalStakedFunds = totalStakedFunds.add(_amount);
-        stakes[msg.sender] = stakes[msg.sender].add(_amount);
     }
 
     //@ todo, add view stake
     function getFunds(address _staker) external view returns (uint256) {
-        uint256 stake = stakes[_staker];
-        return stake.mul(totalStakedFunds).div(totalStake);
+        return
+            stakeToken.balanceOf(_staker).mul(totalStakedFunds).div(
+                stakeToken.totalSupply()
+            );
     }
 
     // to withdraw funds, add them to a vesting schedule
@@ -110,8 +111,10 @@ contract Insurance is Ownable {
             stakesWithdraw[msg.sender].blockInitiated == 0,
             "WITHDRAW_ACTIVE"
         );
-        require(stakes[msg.sender] >= _amount, "INSUFFICIENT_STAKE");
-        stakes[msg.sender] = stakes[msg.sender].sub(_amount);
+        require(
+            stakeToken.transferFrom(msg.sender, address(this), _amount),
+            "TRANSFER_FAILED"
+        );
         // totalStake sub? no right
         stakesWithdraw[msg.sender] = StakeWithdraw(block.number, _amount);
     }
@@ -123,7 +126,7 @@ contract Insurance is Ownable {
             withdraw.blockInitiated.add(timeLock) > block.number,
             "TIMELOCK_EXPIRED"
         );
-        stakes[msg.sender] = stakes[msg.sender].add(withdraw.stake);
+        stakeToken.transfer(msg.sender, withdraw.stake);
         delete stakesWithdraw[msg.sender];
     }
 
@@ -139,10 +142,12 @@ contract Insurance is Ownable {
             withdraw.blockInitiated.add(timeLock) <= block.number,
             "TIMELOCK_ACTIVE"
         );
-        uint256 funds = withdraw.stake.mul(totalStakedFunds).div(totalStake);
+        uint256 funds = withdraw.stake.mul(totalStakedFunds).div(
+            stakeToken.totalSupply()
+        );
         token.transfer(_staker, funds);
+        stakeToken.burn(address(this), withdraw.stake);
         delete stakesWithdraw[msg.sender];
-        totalStake = totalStake.sub(withdraw.stake);
     }
 
     function addProfileBalance(bytes32 _protocol, uint256 _amount) external {

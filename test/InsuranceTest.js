@@ -21,16 +21,22 @@ describe("Happy flow", function () {
     const WETH = await ethers.getContractFactory("ExampleToken");
     ERC20 = await WETH.deploy(owner.getAddress(), parseEther("1000000"));
 
+    const STAKE = await ethers.getContractFactory("Stake");
+    StakeToken = await STAKE.deploy();
+
     const Insurance = await ethers.getContractFactory("Insurance");
-    insurance = await Insurance.deploy(ERC20.address);
+    insurance = await Insurance.deploy(ERC20.address, StakeToken.address);
+
     await ERC20.approve(insurance.address, constants.MaxUint256);
+    await StakeToken.approve(insurance.address, constants.MaxUint256);
+    await StakeToken.transferOwnership(insurance.address);
   });
   it("Stake", async function () {
     await insurance.stakeFunds(parseEther("250"));
     expect(await insurance.getFunds(await owner.getAddress())).to.eq(
       parseEther("250")
     );
-    expect(await insurance.totalStake()).to.eq(parseEther("250"));
+    expect(await StakeToken.totalSupply()).to.eq(parseEther("250"));
     expect(await insurance.totalStakedFunds()).to.eq(parseEther("250"));
   });
   it("Add protocol", async function () {
@@ -55,7 +61,7 @@ describe("Happy flow", function () {
     expect(await insurance.getFunds(await owner.getAddress())).to.eq(
       parseEther("1250")
     );
-    expect(await insurance.totalStake()).to.eq(parseEther("1250"));
+    expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
     expect(await insurance.totalStakedFunds()).to.eq(parseEther("1250"));
   });
   it("Verify protocol changes", async function () {
@@ -96,7 +102,9 @@ describe("Happy flow", function () {
     expect(await insurance.getFunds(await owner.getAddress())).to.eq(
       parseEther("1250").add(paid)
     );
-    expect(await insurance.totalStake()).to.eq(parseEther("1250"));
-    expect(await insurance.totalStakedFunds()).to.eq(parseEther("1250").add(paid));
+    expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
+    expect(await insurance.totalStakedFunds()).to.eq(
+      parseEther("1250").add(paid)
+    );
   });
 });
