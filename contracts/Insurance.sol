@@ -57,6 +57,20 @@ contract Insurance is Ownable {
         return totalStakedFunds.add(strategyManager.balanceOf(address(token)));
     }
 
+    function depositStrategyManager(uint256 _amount) external onlyOwner {
+        require(
+            token.transfer(address(strategyManager), _amount),
+            "INSUFFICIENT_FUNDS"
+        );
+        totalStakedFunds = totalStakedFunds.sub(_amount);
+        strategyManager.deposit(address(token));
+    }
+
+    function withdrawStrategyManager(uint256 _amount) external onlyOwner {
+        strategyManager.withdraw(address(token), _amount);
+        totalStakedFunds = totalStakedFunds.add(_amount);
+    }
+
     function setTimeLock(uint256 _timeLock) external onlyOwner {
         timeLock = _timeLock;
     }
