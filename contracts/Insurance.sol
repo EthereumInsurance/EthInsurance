@@ -82,9 +82,9 @@ contract Insurance is Ownable {
         address _payout
     ) external onlyOwner {
         require(coveredFunds(_protocol) >= _amount, "INSUFFICIENT_COVERAGE");
-        require(token.transfer(_payout, _amount), "INSUFFICIENT_FUNDS");
+        require(token.approve(_payout, _amount), "INSUFFICIENT_FUNDS");
         IPayOut payout = IPayOut(_payout);
-        payout.insurancePaid(_amount);
+        payout.insurancePaid(address(token), _amount);
         totalStakedFunds = totalStakedFunds.sub(_amount);
     }
 
@@ -93,8 +93,18 @@ contract Insurance is Ownable {
             token.transferFrom(msg.sender, address(this), _amount),
             "INSUFFICIENT_FUNDS"
         );
-        stakeToken.mint(msg.sender, _amount);
+        // TODO, test this calculation with multiple scenarios
+        uint256 totalStake = stakeToken.totalSupply();
+        uint256 stake;
+        if (totalStake == 0) {
+            // mint initial stake
+            stake = _amount;
+        } else {
+            // mint stake based on funds in pool
+            stake = _amount.mul(totalStake).div(totalStakedFunds);
+        }
         totalStakedFunds = totalStakedFunds.add(_amount);
+        stakeToken.mint(msg.sender, stake);
     }
 
     //@ todo, add view stake

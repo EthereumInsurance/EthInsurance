@@ -161,3 +161,70 @@ describe("Happy flow", function () {
     );
   });
 });
+
+describe("Join after, other user", function () {
+  let insurance;
+  let ERC20;
+  let StakeToken;
+  let payout;
+  let blockNumber;
+
+  let debt;
+  let premium;
+  let paid;
+
+  before(async function () {
+    [owner, user] = await ethers.getSigners();
+    const WETH = await ethers.getContractFactory("ExampleToken");
+    ERC20 = await WETH.deploy(owner.getAddress(), parseEther("1000000"));
+    const STAKE = await ethers.getContractFactory("Stake");
+    StakeToken = await STAKE.deploy();
+
+    const Insurance = await ethers.getContractFactory("Insurance");
+    insurance = await Insurance.deploy(ERC20.address, StakeToken.address);
+
+    const Payout = await ethers.getContractFactory("PayOut");
+    payout = await Payout.deploy();
+
+    await insurance.setTimeLock(10);
+    await ERC20.approve(insurance.address, constants.MaxUint256);
+    await StakeToken.approve(insurance.address, constants.MaxUint256);
+    await StakeToken.transferOwnership(insurance.address);
+
+    await ERC20.transfer(await user.getAddress(), parseEther("10000"));
+    await ERC20.connect(user).approve(insurance.address, constants.MaxUint256);
+
+    await insurance.stakeFunds(parseEther("1000"));
+    await insurance.updateProfiles(
+      PLACEHOLDER_PROTOCOL,
+      parseEther("500"),
+      onePercent,
+      constants.MaxUint256
+    );
+  });
+  it("Payout", async function () {
+    // TODO something like
+    // await balances(token,
+    //  owner: parseEther("1"),
+    //  insurace: parseEther("10"),
+    //)
+    // that asserts that the sum of these balances == totalSupply()
+    await insurance.insurancePayout(
+      PLACEHOLDER_PROTOCOL,
+      parseEther("500"),
+      payout.address
+    );
+    const ownerStake = await StakeToken.balanceOf(await owner.getAddress());
+    const ownerFunds = await insurance.getFunds(await owner.getAddress());
+    expect(ownerStake).to.eq(parseEther("1000"));
+    expect(ownerFunds).to.eq(parseEther("500"));
+  });
+  it("Join", async function () {
+    await insurance.connect(user).stakeFunds(parseEther("500"));
+
+    const userStake = await StakeToken.balanceOf(await user.getAddress());
+    const userFunds = await insurance.getFunds(await user.getAddress());
+    expect(userStake).to.eq(parseEther("1000"));
+    expect(userFunds).to.eq(parseEther("500"));
+  });
+});
