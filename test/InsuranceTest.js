@@ -24,8 +24,15 @@ describe("Happy flow", function () {
     const STAKE = await ethers.getContractFactory("Stake");
     StakeToken = await STAKE.deploy();
 
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    strategyManager = await StrategyManager.deploy();
+
     const Insurance = await ethers.getContractFactory("Insurance");
-    insurance = await Insurance.deploy(ERC20.address, StakeToken.address);
+    insurance = await Insurance.deploy(
+      ERC20.address,
+      StakeToken.address,
+      strategyManager.address
+    );
 
     await insurance.setTimeLock(10);
     await ERC20.approve(insurance.address, constants.MaxUint256);
@@ -39,7 +46,7 @@ describe("Happy flow", function () {
     );
     expect(await ERC20.balanceOf(insurance.address)).to.eq(parseEther("250"));
     expect(await StakeToken.totalSupply()).to.eq(parseEther("250"));
-    expect(await insurance.totalStakedFunds()).to.eq(parseEther("250"));
+    expect(await insurance.getTotalStakedFunds()).to.eq(parseEther("250"));
   });
   it("Add protocol", async function () {
     blockNumber = await block(
@@ -64,7 +71,7 @@ describe("Happy flow", function () {
       parseEther("1250")
     );
     expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
-    expect(await insurance.totalStakedFunds()).to.eq(parseEther("1250"));
+    expect(await insurance.getTotalStakedFunds()).to.eq(parseEther("1250"));
   });
   it("Verify protocol changes", async function () {
     expect(await insurance.coveredFunds(PLACEHOLDER_PROTOCOL)).to.eq(
@@ -105,7 +112,7 @@ describe("Happy flow", function () {
       parseEther("1250").add(paid)
     );
     expect(await StakeToken.totalSupply()).to.eq(parseEther("1250"));
-    expect(await insurance.totalStakedFunds()).to.eq(
+    expect(await insurance.getTotalStakedFunds()).to.eq(
       parseEther("1250").add(paid)
     );
   });
@@ -179,9 +186,15 @@ describe("Join after, other user", function () {
     ERC20 = await WETH.deploy(owner.getAddress(), parseEther("1000000"));
     const STAKE = await ethers.getContractFactory("Stake");
     StakeToken = await STAKE.deploy();
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    strategyManager = await StrategyManager.deploy();
 
     const Insurance = await ethers.getContractFactory("Insurance");
-    insurance = await Insurance.deploy(ERC20.address, StakeToken.address);
+    insurance = await Insurance.deploy(
+      ERC20.address,
+      StakeToken.address,
+      strategyManager.address
+    );
 
     const Payout = await ethers.getContractFactory("PayOut");
     payout = await Payout.deploy();

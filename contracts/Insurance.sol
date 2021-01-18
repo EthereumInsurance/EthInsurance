@@ -9,12 +9,14 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./interfaces/IPayOut.sol";
 import "./interfaces/IStake.sol";
+import "./interfaces/IStrategyManager.sol";
 
 contract Insurance is Ownable {
     using SafeMath for uint256;
 
     IERC20 public token;
     IStake public stakeToken;
+    IStrategyManager public strategyManager;
 
     struct ProtocolProfile {
         // translated to the value of the native erc20 of the pool
@@ -34,13 +36,25 @@ contract Insurance is Ownable {
 
     mapping(address => StakeWithdraw) public stakesWithdraw;
     // in case of apy on funds. this will be added to total funds
-    uint256 public totalStakedFunds;
+    uint256 internal totalStakedFunds;
     // time lock for withdraw period in blocks
     uint256 public timeLock;
 
-    constructor(address _token, address _stakeToken) public {
+    constructor(
+        address _token,
+        address _stakeToken,
+        address _strategyManager
+    ) public {
         token = IERC20(_token);
         stakeToken = IStake(_stakeToken);
+        strategyManager = IStrategyManager(_strategyManager);
+    }
+
+    function getTotalStakedFunds() public view returns (uint256) {
+        // TODO
+        // on stake, transfer to strategymanager
+        // on withdraw, transfer from strategymanager
+        return totalStakedFunds.add(strategyManager.balanceOf(address(token)));
     }
 
     function setTimeLock(uint256 _timeLock) external onlyOwner {
@@ -101,7 +115,7 @@ contract Insurance is Ownable {
             stake = _amount;
         } else {
             // mint stake based on funds in pool
-            stake = _amount.mul(totalStake).div(totalStakedFunds);
+            stake = _amount.mul(totalStake).div(getTotalStakedFunds());
         }
         totalStakedFunds = totalStakedFunds.add(_amount);
         stakeToken.mint(msg.sender, stake);
@@ -110,7 +124,7 @@ contract Insurance is Ownable {
     //@ todo, add view stake
     function getFunds(address _staker) external view returns (uint256) {
         return
-            stakeToken.balanceOf(_staker).mul(totalStakedFunds).div(
+            stakeToken.balanceOf(_staker).mul(getTotalStakedFunds()).div(
                 stakeToken.totalSupply()
             );
     }
@@ -153,7 +167,7 @@ contract Insurance is Ownable {
             withdraw.blockInitiated.add(timeLock) <= block.number,
             "TIMELOCK_ACTIVE"
         );
-        uint256 funds = withdraw.stake.mul(totalStakedFunds).div(
+        uint256 funds = withdraw.stake.mul(getTotalStakedFunds()).div(
             stakeToken.totalSupply()
         );
         // if this one fails, contract is broken
@@ -197,9 +211,9 @@ contract Insurance is Ownable {
     function coveredFunds(bytes32 _protocol) public view returns (uint256) {
         ProtocolProfile memory p = profiles[_protocol];
         require(p.maxFundsCovered > 0, "PROFILE_NOT_FOUND");
-        if (totalStakedFunds > p.maxFundsCovered) {
+        if (getTotalStakedFunds() > p.maxFundsCovered) {
             return p.maxFundsCovered;
         }
-        return totalStakedFunds;
+        return getTotalStakedFunds();
     }
 }
