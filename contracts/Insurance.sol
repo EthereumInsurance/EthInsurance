@@ -96,9 +96,9 @@ contract Insurance is Ownable {
         address _payout
     ) external onlyOwner {
         require(coveredFunds(_protocol) >= _amount, "INSUFFICIENT_COVERAGE");
-        require(token.approve(_payout, _amount), "INSUFFICIENT_FUNDS");
+        require(token.transfer(_payout, _amount), "INSUFFICIENT_FUNDS");
         IPayOut payout = IPayOut(_payout);
-        payout.insurancePaid(address(token), _amount);
+        payout.deposit(address(token));
         totalStakedFunds = totalStakedFunds.sub(_amount);
     }
 
