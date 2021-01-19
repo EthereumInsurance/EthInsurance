@@ -32,7 +32,9 @@ contract StrategyManager is IStrategyManager, Ownable {
         // this method should make sure a 'safe' value is returned from the strategies
         // should not affect the insurance pool dramatically if a strategy goes rogue
         address strategy = strategies[_token];
-        require(strategy != address(0), "NO_STRATEGY");
+        if (strategy == address(0)) {
+            return 0;
+        }
 
         return IStrategy(strategy).balanceOf();
     }

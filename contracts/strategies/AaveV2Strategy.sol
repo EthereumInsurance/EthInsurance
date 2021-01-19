@@ -15,18 +15,26 @@ contract AaveV2Strategy is IStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    address public strategyManager;
     address public override want;
     address public aWant;
     address internal lpAddressProvider;
 
+    modifier onlyStrategyManager() {
+        require(msg.sender == strategyManager, "strategyManager");
+        _;
+    }
+
     constructor(
         address _want,
         address _aWant,
-        address _lendingPoolAddressProvider
+        address _lendingPoolAddressProvider,
+        address _strategyManager
     ) public {
         want = _want;
         aWant = _aWant;
         lpAddressProvider = _lendingPoolAddressProvider;
+        strategyManager = _strategyManager;
     }
 
     function getLp() internal view returns (ILendingPool) {
@@ -43,17 +51,22 @@ contract AaveV2Strategy is IStrategy {
         lp.deposit(want, amount, address(this), 0);
     }
 
-    function withdrawAll() external override returns (uint256) {
+    function withdrawAll()
+        external
+        override
+        onlyStrategyManager
+        returns (uint256)
+    {
         ILendingPool lp = getLp();
         return lp.withdraw(want, uint256(-1), msg.sender);
     }
 
-    function withdraw(uint256 _amount) external override {
+    function withdraw(uint256 _amount) external override onlyStrategyManager {
         ILendingPool lp = getLp();
         lp.withdraw(want, _amount, msg.sender);
     }
 
-    function withdraw(address _token) external override {
+    function withdraw(address _token) external override onlyStrategyManager {
         IERC20 token = IERC20(_token);
         token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
