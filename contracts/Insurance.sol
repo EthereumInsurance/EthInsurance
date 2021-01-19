@@ -18,6 +18,8 @@ contract Insurance is Ownable {
     IStake public stakeToken;
     IStrategyManager public strategyManager;
 
+    bool public redirectStakeToStrategy;
+
     struct ProtocolProfile {
         // translated to the value of the native erc20 of the pool
         uint256 maxFundsCovered;
@@ -57,7 +59,7 @@ contract Insurance is Ownable {
         return totalStakedFunds.add(strategyManager.balanceOf(address(token)));
     }
 
-    function depositStrategyManager(uint256 _amount) external onlyOwner {
+    function _depositStrategyManager(uint256 _amount) internal {
         require(
             token.transfer(address(strategyManager), _amount),
             "INSUFFICIENT_FUNDS"
@@ -69,6 +71,19 @@ contract Insurance is Ownable {
     function withdrawStrategyManager(uint256 _amount) external onlyOwner {
         strategyManager.withdraw(address(token), _amount);
         totalStakedFunds = totalStakedFunds.add(_amount);
+    }
+
+    function depositStrategyManager(uint256 _amount) external onlyOwner {
+        _depositStrategyManager(_amount);
+    }
+
+    function setStrategyManager(address _strategyManager) external onlyOwner {
+        //todo withdraw all funds
+        strategyManager = IStrategyManager(_strategyManager);
+    }
+
+    function setRedirectStakeToStrategy(bool _redirect) external onlyOwner {
+        redirectStakeToStrategy = _redirect;
     }
 
     function setTimeLock(uint256 _timeLock) external onlyOwner {
@@ -133,6 +148,9 @@ contract Insurance is Ownable {
         }
         totalStakedFunds = totalStakedFunds.add(_amount);
         stakeToken.mint(msg.sender, stake);
+        if (redirectStakeToStrategy) {
+            _depositStrategyManager(_amount);
+        }
     }
 
     //@ todo, add view stake
