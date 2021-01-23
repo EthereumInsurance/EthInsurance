@@ -31,6 +31,9 @@ contract StrategyManager is IStrategyManager, Ownable {
     {
         // this method should make sure a 'safe' value is returned from the strategies
         // should not affect the insurance pool dramatically if a strategy goes rogue
+
+        // one way to pull it of, is to not do the balances live.
+        // as live balances will also ensure a loop over the strategies.
         address strategy = strategies[_token];
         if (strategy == address(0)) {
             return 0;

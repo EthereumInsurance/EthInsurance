@@ -205,7 +205,7 @@ contract Insurance is Ownable {
         // if this one fails, contract is broken
         token.transfer(_staker, funds);
         stakeToken.burn(address(this), withdraw.stake);
-        delete stakesWithdraw[msg.sender];
+        delete stakesWithdraw[_staker];
     }
 
     function addProfileBalance(bytes32 _protocol, uint256 _amount) external {
