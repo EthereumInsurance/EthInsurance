@@ -32,6 +32,9 @@ contract Insurance is Ownable {
         uint256 stake;
     }
 
+    mapping(bytes32 => bool) public protocolsCovered;
+    bytes32[] public protocols;
+
     mapping(bytes32 => ProtocolProfile) public profiles;
     mapping(bytes32 => uint256) public profileBalances;
     mapping(bytes32 => uint256) public profilePremiumLastPaid;
@@ -53,9 +56,6 @@ contract Insurance is Ownable {
     }
 
     function getTotalStakedFunds() public view returns (uint256) {
-        // TODO
-        // on stake, transfer to strategymanager
-        // on withdraw, transfer from strategymanager
         return totalStakedFunds.add(strategyManager.balanceOf(address(token)));
     }
 
@@ -68,9 +68,13 @@ contract Insurance is Ownable {
         strategyManager.deposit(address(token));
     }
 
-    function withdrawStrategyManager(uint256 _amount) external onlyOwner {
+    function _withdrawStrategyManager(uint256 _amount) internal {
         strategyManager.withdraw(address(token), _amount);
         totalStakedFunds = totalStakedFunds.add(_amount);
+    }
+
+    function withdrawStrategyManager(uint256 _amount) external onlyOwner {
+        _withdrawStrategyManager(_amount);
     }
 
     function depositStrategyManager(uint256 _amount) external onlyOwner {
@@ -96,27 +100,66 @@ contract Insurance is Ownable {
         bytes32 _protocol,
         uint256 _maxFundsCovered,
         uint256 _percentagePremiumPerBlock,
-        uint256 _premiumLastPaid
+        uint256 _premiumLastPaid,
+        bool _forceOpenDebtPay
     ) external onlyOwner {
         require(_protocol != bytes32(0), "INVALID_PROTOCOL");
         require(_maxFundsCovered != 0, "INVALID_FUND");
         require(_percentagePremiumPerBlock != 0, "INVALID_RISK");
+        if (_forceOpenDebtPay) {
+            require(tryPayOffDebt(_protocol, true), "FAILED_TO_PAY_DEBT");
+        }
         profiles[_protocol] = ProtocolProfile(
             _maxFundsCovered,
             _percentagePremiumPerBlock
         );
+        if (!protocolsCovered[_protocol]) {
+            protocolsCovered[_protocol] = true;
+            protocols.push(_protocol);
+        }
 
         if (_premiumLastPaid == 0) {
             // dont update
             require(profilePremiumLastPaid[_protocol] > 0, "INVALID_LAST_PAID");
             return;
         }
-        // TODO if percentagePremiumPerBlock is changing. Call payOffDebt to get the debt for the old percentagePremiumPerBlock
+
         if (_premiumLastPaid == uint256(-1)) {
             profilePremiumLastPaid[_protocol] = block.number;
         } else {
             profilePremiumLastPaid[_protocol] = _premiumLastPaid;
         }
+    }
+
+    function removeProtocol(
+        bytes32 _protocol,
+        uint256 _index,
+        bool _forceOpenDebtPay,
+        address _balanceReceiver
+    ) external onlyOwner {
+        // do the index logic outside of solidity
+        require(protocols[_index] == _protocol, "INVALID_INDEX");
+        if (_forceOpenDebtPay) {
+            require(tryPayOffDebt(_protocol, true), "FAILED_TO_PAY_DEBT");
+        }
+        // transfer remaining balance to user
+        require(
+            token.transferFrom(
+                address(this),
+                _balanceReceiver,
+                profileBalances[_protocol]
+            ),
+            "INSUFFICIENT_FUNDS"
+        );
+        delete profiles[_protocol];
+        delete profileBalances[_protocol];
+        delete profilePremiumLastPaid[_protocol];
+        protocolsCovered[_protocol] = false;
+        // set last element to current index
+        protocols[_index] = protocols[protocols.length - 1];
+        // remove last element
+        delete protocols[protocols.length - 1];
+        protocols.pop();
     }
 
     function insurancePayout(
@@ -199,9 +242,18 @@ contract Insurance is Ownable {
             withdraw.blockInitiated.add(timeLock) <= block.number,
             "TIMELOCK_ACTIVE"
         );
+        // don't redirect to strategy manager
+        // as this will be done a couple lines later
+        _tryPayOffDebtAll(false);
+
         uint256 funds = withdraw.stake.mul(getTotalStakedFunds()).div(
             stakeToken.totalSupply()
         );
+        if (funds > totalStakedFunds) {
+            _withdrawStrategyManager(funds.sub(totalStakedFunds));
+        } else if (redirectStakeToStrategy && funds < totalStakedFunds) {
+            _depositStrategyManager(totalStakedFunds.sub(funds));
+        }
         // if this one fails, contract is broken
         token.transfer(_staker, funds);
         stakeToken.burn(address(this), withdraw.stake);
@@ -216,13 +268,37 @@ contract Insurance is Ownable {
         profileBalances[_protocol] = profileBalances[_protocol].add(_amount);
     }
 
-    function payOffDebt(bytes32 _protocol) external {
+    function tryPayOffDebt(bytes32 _protocol, bool _useRedirect)
+        internal
+        returns (bool)
+    {
         uint256 debt = accruedDebt(_protocol);
-        // will throw an error if the balance is insufficient
+        if (debt < profileBalances[_protocol]) {
+            return false;
+        }
         profileBalances[_protocol] = profileBalances[_protocol].sub(debt);
         // move funds to the staker pool
         totalStakedFunds = totalStakedFunds.add(debt);
         profilePremiumLastPaid[_protocol] = block.number;
+        // sent paid debt to strategy manager
+        if (_useRedirect && redirectStakeToStrategy) {
+            _depositStrategyManager(debt);
+        }
+        return true;
+    }
+
+    function payOffDebt(bytes32 _protocol) external {
+        require(tryPayOffDebt(_protocol, true), "INSUFFICIENT_PROFILE_BALANCE");
+    }
+
+    function _tryPayOffDebtAll(bool _useRedirect) internal {
+        for (uint256 i = 0; i < protocols.length; i++) {
+            tryPayOffDebt(protocols[i], _useRedirect);
+        }
+    }
+
+    function tryPayOffDebtAll() external {
+        _tryPayOffDebtAll(true);
     }
 
     function accruedDebt(bytes32 _protocol) public view returns (uint256) {
