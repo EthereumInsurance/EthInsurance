@@ -54,7 +54,8 @@ describe("Happy flow", function () {
         PLACEHOLDER_PROTOCOL,
         parseEther("500"),
         onePercent,
-        constants.MaxUint256
+        constants.MaxUint256,
+        false
       )
     );
 
@@ -153,6 +154,10 @@ describe("Happy flow", function () {
     for (var i = 1; i <= 10; i++) {
       await ethers.provider.send("evm_mine", []);
     }
+    const currentDebtPlusNextBlock = (
+      await insurance.accruedDebt(PLACEHOLDER_PROTOCOL)
+    ).add(premium);
+
     await insurance.claimFunds(await owner.getAddress());
     expect(await StakeToken.balanceOf(await owner.getAddress())).to.eq(
       parseEther("625")
@@ -162,7 +167,11 @@ describe("Happy flow", function () {
     );
 
     // 50% of the pool
-    const paidout = parseEther("1250").add(paid).div(2);
+    const paidout = parseEther("1250")
+      .add(paid)
+      .add(currentDebtPlusNextBlock)
+      .div(2);
+
     expect(await ERC20.balanceOf(insurance.address)).to.eq(
       parseEther("1350").sub(paidout)
     );
@@ -212,7 +221,8 @@ describe("Join after, other user", function () {
       PLACEHOLDER_PROTOCOL,
       parseEther("500"),
       onePercent,
-      constants.MaxUint256
+      constants.MaxUint256,
+      false
     );
   });
   it("Payout", async function () {

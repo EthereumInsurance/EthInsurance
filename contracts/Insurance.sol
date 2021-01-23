@@ -186,6 +186,10 @@ contract Insurance is Ownable {
             // mint initial stake
             stake = _amount;
         } else {
+            // TODO, decicde if _tryPayOffDebtAll(true); should be called here
+            // As this will give a better representation of the users stake
+            // But will also (significantly) increase gas costs
+
             // mint stake based on funds in pool
             stake = _amount.mul(totalStake).div(getTotalStakedFunds());
         }
@@ -273,7 +277,7 @@ contract Insurance is Ownable {
         returns (bool)
     {
         uint256 debt = accruedDebt(_protocol);
-        if (debt < profileBalances[_protocol]) {
+        if (debt > profileBalances[_protocol]) {
             return false;
         }
         profileBalances[_protocol] = profileBalances[_protocol].sub(debt);
