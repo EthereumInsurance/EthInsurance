@@ -11,7 +11,7 @@ import "../interfaces/aaveV2/ILendingPoolAddressesProvider.sol";
 
 import "../interfaces/IStrategy.sol";
 
-contract AaveV2Strategy is IStrategy {
+contract ATokenV2Strategy is IStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
