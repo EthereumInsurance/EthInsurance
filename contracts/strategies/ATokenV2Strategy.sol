@@ -3,7 +3,6 @@ pragma solidity ^0.7.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/aaveV2/ILendingPool.sol";
@@ -61,7 +60,7 @@ contract ATokenV2Strategy is IStrategy {
         return lp.withdraw(want, uint256(-1), msg.sender);
     }
 
-    function withdraw(uint256 _amount) external override onlyStrategyManager {
+    function withdraw(uint256 _amount) public override onlyStrategyManager {
         ILendingPool lp = getLp();
         lp.withdraw(want, _amount, msg.sender);
     }
