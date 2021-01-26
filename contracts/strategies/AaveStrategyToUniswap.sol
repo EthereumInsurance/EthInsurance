@@ -95,7 +95,7 @@ contract AaveStrategyToUniswap is IStrategy, Ownable {
 
     // ignore running votes
     function forceWithdraw(uint256 _amount) external onlyOwner {
-        IERC20(want).transfer(msg.sender, _amount);
+        IERC20(want).transfer(strategyManager, _amount);
     }
 
     function updateProposals() internal {
