@@ -20,7 +20,10 @@ contract ATokenV2Strategy is IStrategy {
     address internal lpAddressProvider;
 
     modifier onlyStrategyManager() {
-        require(msg.sender == strategyManager, "strategyManager");
+        require(
+            msg.sender == strategyManager || msg.sender == address(this),
+            "strategyManager"
+        );
         _;
     }
 
