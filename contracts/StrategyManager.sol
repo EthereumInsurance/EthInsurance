@@ -34,6 +34,8 @@ contract StrategyManager is IStrategyManager, Ownable {
 
         // one way to pull it of, is to not do the balances live.
         // as live balances will also ensure a loop over the strategies.
+
+        //todo balance of to native token
         address strategy = strategies[_token];
         if (strategy == address(0)) {
             return 0;
@@ -67,7 +69,18 @@ contract StrategyManager is IStrategyManager, Ownable {
         pool = _pool;
     }
 
-    function setStrategy(address _token, address _strategy) external onlyOwner {
+    function removeStrategy(address _token) external onlyOwner {
+        address strategy = strategies[_token];
+        require(strategy != address(0), "NO_STRATEGY");
+        require(IStrategy(strategy).withdrawAll() == 0, "NOT_EMPYY");
+
+        delete strategies[_token];
+    }
+
+    function updateStrategy(address _token, address _strategy)
+        external
+        onlyOwner
+    {
         require(IStrategy(_strategy).want() == _token, "INCOMPATIBLE_STRATEGY");
         address currentStrategy = strategies[_token];
         if (currentStrategy != address(0)) {
