@@ -141,22 +141,22 @@ contract AaveStrategyToUniswap is IStrategy, Ownable {
         bool[] memory _withDelegatecalls,
         bytes32 _ipfsHash
     ) external onlyOwner returns (uint256) {
-        aaveGovernanceV2.create(
-            IExecutorWithTimelock(_executor),
-            _targets,
-            _values,
-            _signatures,
-            _calldatas,
-            _withDelegatecalls,
-            _ipfsHash
-        );
+        return
+            aaveGovernanceV2.create(
+                IExecutorWithTimelock(_executor),
+                _targets,
+                _values,
+                _signatures,
+                _calldatas,
+                _withDelegatecalls,
+                _ipfsHash
+            );
     }
 
-    function swapToTokenViaETH(
-        uint256 _amount,
-        address _toToken,
-        uint256 _toMinAmount
-    ) external onlyOwner {
+    function swapToTokenViaETH(uint256 _amount, uint256 _toMinAmount)
+        external
+        onlyOwner
+    {
         updateProposals();
         require(runningProposals.length == 0, "ACTIVE_VOTE");
 
@@ -164,7 +164,7 @@ contract AaveStrategyToUniswap is IStrategy, Ownable {
         address[] memory path = new address[](2);
         path[0] = want; // aave
         path[1] = router.WETH();
-        path[2] = _toToken; // dai
+        path[2] = swap; // dai
         router.swapExactTokensForTokens(
             _amount,
             _toMinAmount,
@@ -173,6 +173,6 @@ contract AaveStrategyToUniswap is IStrategy, Ownable {
             block.timestamp
         );
         // tell the strategy manager we deposited this new token.
-        IStrategyManager(strategyManager).deposit(_toToken);
+        IStrategyManager(strategyManager).deposit(swap);
     }
 }
