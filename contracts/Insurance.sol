@@ -7,14 +7,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./interfaces/IPool.sol";
 import "./interfaces/IPayOut.sol";
 import "./interfaces/IStake.sol";
 import "./interfaces/IStrategyManager.sol";
 
-contract Insurance is Ownable {
+contract Insurance is IPool, Ownable {
     using SafeMath for uint256;
 
-    IERC20 public token;
+    IERC20 public override token;
     IStake public stakeToken;
     IStrategyManager public strategyManager;
 
@@ -56,7 +57,7 @@ contract Insurance is Ownable {
     }
 
     function getTotalStakedFunds() public view returns (uint256) {
-        return totalStakedFunds.add(strategyManager.balanceOf(address(token)));
+        return totalStakedFunds.add(strategyManager.balanceOfNative());
     }
 
     function _depositStrategyManager(uint256 _amount) internal {

@@ -6,6 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./interfaces/chainlink/AggregratorV3Interface.sol";
+
+import "./interfaces/IPool.sol";
 import "./interfaces/IStrategyManager.sol";
 import "./interfaces/IStrategy.sol";
 
@@ -16,19 +19,36 @@ contract StrategyManager is IStrategyManager, Ownable {
     using SafeERC20 for IERC20;
 
     address public pool;
+    address[] public tokens;
     mapping(address => address) public strategies;
+    // todo, use ENS
+    mapping(address => AggregatorV3Interface) public priceOracle;
 
     modifier onlyPool() {
         require(msg.sender == pool, "ONLY_POOL");
         _;
     }
 
-    function balanceOf(address _token)
-        external
-        override
-        view
-        returns (uint256)
-    {
+    function balanceOfNative() external override view returns (uint256) {
+        address native = address(IPool(pool).token());
+        uint256 balance = balanceOf(native);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            if (token == native) {
+                continue;
+            }
+
+            // TODO validate price is up to date
+            (, int256 price, , , ) = priceOracle[token].latestRoundData();
+            // TODO validate if !18 decimals will work as well
+            balance = balance.add(
+                uint256(price).mul(balanceOf(token).div(100000000))
+            );
+        }
+        return balance;
+    }
+
+    function balanceOf(address _token) public override view returns (uint256) {
         // this method should make sure a 'safe' value is returned from the strategies
         // should not affect the insurance pool dramatically if a strategy goes rogue
 
@@ -69,18 +89,27 @@ contract StrategyManager is IStrategyManager, Ownable {
         pool = _pool;
     }
 
-    function removeStrategy(address _token) external onlyOwner {
+    function removeStrategy(address _token, uint256 _index) external onlyOwner {
         address strategy = strategies[_token];
         require(strategy != address(0), "NO_STRATEGY");
         require(IStrategy(strategy).withdrawAll() == 0, "NOT_EMPYY");
+        require(tokens[_index] == _token, "INVALID_INDEX");
+
+        tokens[_index] = tokens[tokens.length - 1];
+        // remove last element
+        delete tokens[tokens.length - 1];
+        tokens.pop();
 
         delete strategies[_token];
+        // aave to usd, etc...
+        delete priceOracle[_token];
     }
 
-    function updateStrategy(address _token, address _strategy)
-        external
-        onlyOwner
-    {
+    function updateStrategy(
+        address _token,
+        address _strategy,
+        address _priceOracle
+    ) external onlyOwner {
         require(IStrategy(_strategy).want() == _token, "INCOMPATIBLE_STRATEGY");
         address currentStrategy = strategies[_token];
         if (currentStrategy != address(0)) {
@@ -88,8 +117,12 @@ contract StrategyManager is IStrategyManager, Ownable {
             // deposit needs to be called manually with these token addresses
             // TODO, consider returning array of address on withdrawAll
             IStrategy(currentStrategy).withdrawAll();
+        } else {
+            // new strategy
+            tokens.push(_token);
         }
         strategies[_token] = _strategy;
+        priceOracle[_token] = AggregatorV3Interface(_priceOracle);
         deposit(_token);
     }
 
