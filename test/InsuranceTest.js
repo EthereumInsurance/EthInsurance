@@ -35,6 +35,7 @@ describe("Happy flow", function () {
     );
 
     await insurance.setTimeLock(10);
+    await strategyManager.setPool(insurance.address);
     await ERC20.approve(insurance.address, constants.MaxUint256);
     await StakeToken.approve(insurance.address, constants.MaxUint256);
     await StakeToken.transferOwnership(insurance.address);
@@ -209,6 +210,7 @@ describe("Join after, other user", function () {
     payout = await Payout.deploy();
 
     await insurance.setTimeLock(10);
+    await strategyManager.setPool(insurance.address);
     await ERC20.approve(insurance.address, constants.MaxUint256);
     await StakeToken.approve(insurance.address, constants.MaxUint256);
     await StakeToken.transferOwnership(insurance.address);
