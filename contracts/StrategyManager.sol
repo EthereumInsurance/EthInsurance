@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./interfaces/chainlink/AggregratorV3Interface.sol";
+import "./interfaces/chainlink/AggregatorV3Interface.sol";
 
 import "./interfaces/IPool.sol";
 import "./interfaces/IStrategyManager.sol";
@@ -39,11 +39,13 @@ contract StrategyManager is IStrategyManager, Ownable {
             }
 
             // TODO validate price is up to date
-            (, int256 price, , , ) = priceOracle[token].latestRoundData();
-            // TODO validate if !18 decimals will work as well
-            balance = balance.add(
-                uint256(price).mul(balanceOf(token).div(100000000))
-            );
+            (, int256 _price, , , ) = priceOracle[token].latestRoundData();
+
+            uint256 price = uint256(_price);
+            if (priceOracle[token].decimals() == 8) {
+                price = price.mul(10**10);
+            }
+            balance = balance.add(price.mul(balanceOf(token).div(10**18)));
         }
         return balance;
     }
