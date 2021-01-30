@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "../interfaces/chainlink/AggregatorV3Interface.sol";
 
-contract MockOracle is AggregatorV3Interface {
+contract MockOracle is AggregatorV3Interface, Ownable {
     function decimals() external override view returns (uint8) {
         return 8;
     }
@@ -35,7 +37,8 @@ contract MockOracle is AggregatorV3Interface {
     }
 
     int256 public price;
-    function setPrice(int256 _price) external {
+
+    function setPrice(int256 _price) external onlyOwner {
         price = _price;
     }
 

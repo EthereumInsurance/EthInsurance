@@ -71,8 +71,11 @@ contract StrategyManager is IStrategyManager, Ownable {
         require(strategy != address(0), "NO_STRATEGY");
 
         IERC20 token = IERC20(_token);
-        token.safeTransfer(strategy, token.balanceOf(address(this)));
-        IStrategy(strategy).deposit();
+        uint256 balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            token.safeTransfer(strategy, balance);
+            IStrategy(strategy).deposit();
+        }
     }
 
     function withdraw(address _token, uint256 _amount)

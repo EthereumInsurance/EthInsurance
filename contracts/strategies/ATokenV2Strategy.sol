@@ -50,6 +50,7 @@ contract ATokenV2Strategy is IStrategy {
     function deposit() external override {
         ILendingPool lp = getLp();
         uint256 amount = IERC20(want).balanceOf(address(this));
+        IERC20(want).approve(address(lp), amount);
         lp.deposit(want, amount, address(this), 0);
     }
 
@@ -60,6 +61,12 @@ contract ATokenV2Strategy is IStrategy {
         returns (uint256)
     {
         ILendingPool lp = getLp();
+        // debug
+        uint256 balance = IERC20(aWant).balanceOf(address(this));
+        if (balance == 0) {
+            return 0;
+        }
+        // end debug
         return lp.withdraw(want, uint256(-1), msg.sender);
     }
 
