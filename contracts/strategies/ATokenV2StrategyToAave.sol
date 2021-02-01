@@ -37,10 +37,11 @@ contract ATokenV2StrategyToAave is ATokenV2Strategy, Ownable {
         onlyOwner
     {
         // redeem aDai for dai
-        withdraw(_amount);
+        this.withdraw(_amount);
+        IERC20(want).approve(address(router), _amount);
 
         // swap dai to eth to aave and send to strategymanager
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = want; // dai
         path[1] = router.WETH();
         path[2] = aave;

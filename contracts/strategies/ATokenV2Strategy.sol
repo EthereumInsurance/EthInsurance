@@ -70,7 +70,7 @@ contract ATokenV2Strategy is IStrategy {
         return lp.withdraw(want, uint256(-1), msg.sender);
     }
 
-    function withdraw(uint256 _amount) public override onlyStrategyManager {
+    function withdraw(uint256 _amount) external override onlyStrategyManager {
         ILendingPool lp = getLp();
         lp.withdraw(want, _amount, msg.sender);
     }

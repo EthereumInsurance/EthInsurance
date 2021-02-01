@@ -2,6 +2,10 @@ const { parseEther } = require("ethers/lib/utils");
 const hre = require("hardhat");
 const { constants } = require("ethers");
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function main() {
   StrategyManager = "0x02DEEBD5879Ff9ad87eA6dEf9d8d83C1A42943e4";
   AAVE = "0x85821C543d5773cA19b91F5b37e39FeC308C6FA7";
@@ -15,21 +19,22 @@ async function main() {
   const ATokenV2StrategyToAave = await ethers.getContractFactory(
     "ATokenV2StrategyToAave"
   );
-  // const strat = await ATokenV2StrategyToAave.deploy(
-  //   DAI,
-  //   aDAI,
-  //   lpAddressProvider,
-  //   StrategyManager,
-  //   AAVE
-  // );
+  const strat = await ATokenV2StrategyToAave.deploy(
+    DAI,
+    aDAI,
+    lpAddressProvider,
+    StrategyManager,
+    AAVE
+  );
+  console.log("strat", strat.address);
+  await sleep(20000);
+  await SM.updateStrategy(DAI, strat.address, constants.AddressZero);
   // console.log("Atoken strat", strat.address);
-  // await run("verify:verify", {
-  //   address: strat.address,
-  //   constructorArguments: [DAI, aDAI, lpAddressProvider, StrategyManager, AAVE],
-  // });
-  const strat = "0x082E4a8A63c3DB1A13d27FC70A3e5A0DA3a39d5A";
-
-  await SM.updateStrategy(DAI, strat, constants.AddressZero);
+  await sleep(20000);
+  await run("verify:verify", {
+    address: strat.address,
+    constructorArguments: [DAI, aDAI, lpAddressProvider, StrategyManager, AAVE],
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere

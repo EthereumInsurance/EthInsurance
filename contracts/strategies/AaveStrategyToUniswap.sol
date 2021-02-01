@@ -159,9 +159,9 @@ contract AaveStrategyToUniswap is IStrategy, Ownable {
     {
         updateProposals();
         require(runningProposals.length == 0, "ACTIVE_VOTE");
-
+        IERC20(want).approve(address(router), _amount);
         // swap aave to eth to {token} and send to strategymanager
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = want; // aave
         path[1] = router.WETH();
         path[2] = swap; // dai
