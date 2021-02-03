@@ -2,25 +2,25 @@ const { parseEther } = require("ethers/lib/utils");
 const hre = require("hardhat");
 
 async function main() {
-  AAVE = "0x85821C543d5773cA19b91F5b37e39FeC308C6FA7";
-  STAKE = "0x8db295b766d53D1e234D6c65D3cb33D0B8B426c9";
-  StrategyManager = "0x02DEEBD5879Ff9ad87eA6dEf9d8d83C1A42943e4";
-  Insurance = "0x42921447749BAe8AbeCe08Edf36559dc3CA27E29";
-  ATokenStrat = "0xbb84559D90687B68Fd39E73A75e243b1CeE3ff52";
-  mockAaveGovernance = "0x47aEEE430eD69F6A9309c37D05fb1D45c734f5B3";
-  AAVEStrat = "0x79A3AFC68e87062242515d7A7A69EDf7810673b5";
-  MockOracle = "0x1678f97C2E675Fe5228304a00DB8cD09959CD1B3";
+  const AAVE = "0x85821C543d5773cA19b91F5b37e39FeC308C6FA7";
+  STAKE = "0x2610C11aB6f7DCa1d8915f328c6995E0c16f5d94";
+  StrategyManager = "0x93540d68b2447F924E51caE24c3EAa3AB5516e32";
+  Insurance = "0x6E36a59b4b4dBD1d47ca2A6D22A1A45d26765601";
+  ATokenStrat = "0x5852A4a9687dAFFCd5464a2790d3F4d5E5001A69";
+  mockAaveGovernance = "0x8967a5f5eEcCF3b60Dd299502f8BEbD217268956";
+  AAVEStrat = "0xBb8974C5F93ED2935E4E0d9abC95551310c48F62";
+  MockOracle = "0xb3Ef934755f162e2Aa1c7Aae4CD6167aE2694d25";
 
   OWNER = "0x553BF7Cfd38e09C3fb6a8d9B59C1f49b23630Ba8";
   const DAI = "0xff795577d9ac8bd7d90ee22b6c1703490b6512fd";
   const aDAI = "0xdcf0af9e59c002fa3aa091a46196b37530fd48a8";
   const lpAddressProvider = "0x88757f2f99175387ab4c6a4b3067c77a695b0349";
 
-  await run("verify:verify", {
-    address: AAVE,
-    constructorArguments: [OWNER, parseEther("1000000")],
-    contract: "contracts/mocks/AaveToken.sol:AaveToken",
-  });
+  // await run("verify:verify", {
+  //   address: AAVE,
+  //   constructorArguments: [OWNER, parseEther("1000000")],
+  //   contract: "contracts/mocks/AaveToken.sol:AaveToken",
+  // });
 
   await run("verify:verify", {
     address: STAKE,

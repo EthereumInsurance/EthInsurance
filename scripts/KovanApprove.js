@@ -5,7 +5,7 @@ async function main() {
   const DAI_ADDRESS = "0xff795577d9ac8bd7d90ee22b6c1703490b6512fd";
   const DAI = await ethers.getContractAt("IERC20", DAI_ADDRESS);
   await DAI.approve(
-    "0x42921447749bae8abece08edf36559dc3ca27e29",
+    "0x6E36a59b4b4dBD1d47ca2A6D22A1A45d26765601",
     parseEther("10000000000")
   );
 }

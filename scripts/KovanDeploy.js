@@ -17,13 +17,14 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
   const DAI = "0xff795577d9ac8bd7d90ee22b6c1703490b6512fd";
+  const AAVE = "0x85821C543d5773cA19b91F5b37e39FeC308C6FA7";
   const aDAI = "0xdcf0af9e59c002fa3aa091a46196b37530fd48a8";
   const lpAddressProvider = "0x88757f2f99175387ab4c6a4b3067c77a695b0349";
 
-  const ERC20 = await ethers.getContractFactory("AaveToken");
-  AAVE = await ERC20.deploy(owner.getAddress(), parseEther("1000000"));
-  console.log("AAVE", AAVE.address);
-  await sleep(time);
+  // const ERC20 = await ethers.getContractFactory("AaveToken");
+  // AAVE = await ERC20.deploy(owner.getAddress(), parseEther("1000000"));
+  // console.log("AAVE", AAVE.address);
+  // await sleep(time);
 
   const STAKE = await ethers.getContractFactory("Stake");
   StakeToken = await STAKE.deploy();
@@ -61,7 +62,7 @@ async function main() {
     aDAI,
     lpAddressProvider,
     strategyManager.address,
-    AAVE.address
+    AAVE
   );
   await sleep(time);
   console.log("Atoken strat", strat.address);
@@ -74,7 +75,7 @@ async function main() {
   const MockAaveGovernanceV2 = await ethers.getContractFactory(
     "MockAaveGovernanceV2"
   );
-  const mock = await MockAaveGovernanceV2.deploy(AAVE.address);
+  const mock = await MockAaveGovernanceV2.deploy(AAVE);
   console.log("mock aave governance", mock.address);
   await sleep(time);
 
@@ -82,7 +83,7 @@ async function main() {
     "AaveStrategyToUniswap"
   );
   const strat2 = await AaveStrategyToUniswap.deploy(
-    AAVE.address,
+    AAVE,
     DAI,
     mock.address,
     strategyManager.address
@@ -95,17 +96,14 @@ async function main() {
   await sleep(time);
   console.log("Mock oracle", mockOracle.address);
   await strategyManager.updateStrategy(
-    AAVE.address,
+    AAVE,
     strat2.address,
     mockOracle.address
   );
 
   console.log("approving data");
   const D = await ethers.getContractAt("IERC20", DAI);
-  await D.approve(
-    "0x22Ff21fEC8D7Fec933BC721ea2Dfda694217a942",
-    parseEther("10000000000")
-  );
+  await D.approve(insurance.address, parseEther("10000000000"));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
