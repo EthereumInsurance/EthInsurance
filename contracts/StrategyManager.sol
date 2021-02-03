@@ -29,6 +29,10 @@ contract StrategyManager is IStrategyManager, Ownable {
         _;
     }
 
+    function amountOfStrategies() external override view returns (uint256) {
+        return tokens.length;
+    }
+
     function balanceOfNative() external override view returns (uint256) {
         address native = address(IPool(pool).token());
         uint256 balance = balanceOf(native);
@@ -45,7 +49,7 @@ contract StrategyManager is IStrategyManager, Ownable {
             if (priceOracle[token].decimals() == 8) {
                 price = price.mul(10**10);
             }
-            balance = balance.add(price.mul(balanceOf(token).div(10**18)));
+            balance = balance.add(price.mul(balanceOf(token)).div(10**18));
         }
         return balance;
     }

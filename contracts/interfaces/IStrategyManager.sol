@@ -2,6 +2,8 @@
 pragma solidity ^0.7.4;
 
 interface IStrategyManager {
+    function amountOfStrategies() external view returns (uint256);
+
     function balanceOfNative() external view returns (uint256);
 
     function balanceOf(address _token) external view returns (uint256);
