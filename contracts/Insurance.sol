@@ -132,6 +132,7 @@ contract Insurance is IPool, Ownable {
         if (_premiumLastPaid == uint256(-1)) {
             profilePremiumLastPaid[_protocol] = block.number;
         } else {
+            require(_premiumLastPaid < block.number, "TOO_HIGH");
             profilePremiumLastPaid[_protocol] = _premiumLastPaid;
         }
     }

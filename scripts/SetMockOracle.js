@@ -9,7 +9,7 @@ function sleep(ms) {
 async function main() {
   //https://etherscan.io/address/0x547a514d5e3769680Ce22B2361c10Ea13619e8a9#readContract
   MockOracle = "0xb3Ef934755f162e2Aa1c7Aae4CD6167aE2694d25";
-  const price = 30000000000;
+  const price = 520000000; // 34311463711 = 341 dollar
 
   const mock = await ethers.getContractAt("MockOracle", MockOracle);
   await mock.setPrice(price);
